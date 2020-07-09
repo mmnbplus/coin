@@ -1,6 +1,6 @@
 # coin
 
-A new Flutter application.
+喵喵的SHOP小程序安卓版
 
 ## Getting Started
 
