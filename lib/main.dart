@@ -1,117 +1,257 @@
+import 'dart:async';
+import 'package:coin/components/DynamicViewComponent.dart';
+import 'package:coin/utils/HttpRequest.dart';
+import 'package:coin/utils/ListUtil.dart';
 import 'package:flutter/material.dart';
+import 'components/ChooseListViewComponent.dart';
+import 'components/ImgBottomNavigationBarItemComponent.dart';
+import 'config/StaticConfig.dart';
+import 'otherpage/SearchPage.dart';
+
+var width;
+List<String> spanList = new List<String>();
+List<dynamic> dynamicList = new List<dynamic>();
+final StreamController<List<String>> spanListStreamController = StreamController<List<String>>(); //初始化
+final StreamController<List<dynamic>> dynamicListStreamController = StreamController<List<dynamic>>(); //初始化
+ScrollController dynamicScrollController = new ScrollController();
+bool isDynamicScrollBottom = false;
 
 void main() {
-  runApp(MyApp());
+  runApp(new MaterialApp(
+    title: '喵喵',
+    debugShowCheckedModeBanner: false,    //去掉debug图标
+    home: new MainPage(),
+  ));
 }
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+/// 获取动态类型
+void getDynameicType() async {
+  Map<String, Object> response = await HttpRequest.request("/dynamic/getDynameicType");
+  List<dynamic> data = response["data"];
+
+  for(var item in data){
+    spanList.add(item["name"]);
+  }
+
+  spanListStreamController.sink.add(spanList);
+}
+
+///获取动态
+void getDynameicList(int dynamicTypeId, int dynamicId) async {
+  Map<String, Object> dynamicResponse = await HttpRequest.request("/dynamic/getDynameicList",method: "get",params: {
+    'dynamicId': dynamicId,
+    'size': 10,
+    'dynamicTypeId': dynamicTypeId
+  });
+  if(dynamicId == 0){
+    dynamicList = dynamicResponse["data"];
+  }else{
+    dynamicList.addAll(dynamicResponse["data"]);
+  }
+  dynamicListStreamController.sink.add(dynamicList);
+  isDynamicScrollBottom = false;
+}
+
+ListView createDynamic(List<dynamic> dynamicList){
+
+  List<Row> dRow = new List<Row>();
+
+  Container add(Map<String, dynamic> dynamicObj){
+    String imgUrl = "";
+    int ctype = dynamicObj["dynamic"]["ctype"];
+    List<String> imgSrcList = ListUtil.stringToList(dynamicObj["dynamic"]["imgUrlList"]);
+    dynamic dynamicDet = dynamicObj["dynamic"];
+
+    if(ctype == 4 || ctype == 1){
+      imgUrl = "https://mm.cstbservice.top/"+imgSrcList[0];
+    }else if(ctype == 3){
+      imgUrl = "http://vpic.video.qq.com//"+dynamicObj["dynamic"]["videoSrc"]+"_ori_1.jpg";
+    }
+
+    Container c = DynamicViewComponent.create(
+        imgUrl,
+        dynamicDet["title"],
+        dynamicObj["userRoughModel"]["nickName"],
+        dynamicDet["goodCount"],
+        dynamicDet["talkCount"],
+        dynamicDet["lookCount"],
+        dynamicObj["userRoughModel"]["provider"]
     );
+
+    return c;
   }
+
+  for(var i=0;i<dynamicList.length;i++){
+    dRow.add(Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        add(dynamicList[i]),add(dynamicList[i+1])
+      ],
+    ));
+    i++;
+  }
+
+  return ListView(
+    controller: dynamicScrollController,
+    scrollDirection:Axis.vertical,
+    children: dRow,
+  );
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class MainPage extends StatefulWidget {
+  @override
+  MainPageState createState() => MainPageState();
+}
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+class MainPageState extends State<MainPage> {
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  MainPageState(){
+    getDynameicType();
+    getDynameicList(0,0);
+  }
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  void dispose(){
+    spanListStreamController.close();
+    dynamicListStreamController.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+
+    StaticConfig.phoneWeight = MediaQuery.of(context).size.width;
+    /**
+     * 搜索框
+     */
+    Container searchInput = new Container(
+      width: 300,
+      padding: EdgeInsets.only(top: 8,bottom: 8,left: 15),
+      margin: EdgeInsets.only(top:30,left: 10),
+      decoration: BoxDecoration(
+          color: Color(0x00ffffffff),
+          borderRadius: BorderRadius.all(Radius.circular(30))
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: GestureDetector(
+        onTap: ()=>{
+            Navigator.push(
+              context,
+              new MaterialPageRoute(builder: (context) => SearchPage()),
+            )
+        },
+        child: Flex(
+          direction: Axis.horizontal,
           children: <Widget>[
+            Icon(Icons.search,color: Color(0x0033333333)),
             Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              "搜索文章·视频·答案",
+              style: TextStyle(
+                  color: Color(0x0033333333)
+              ),
             ),
           ],
         ),
+      )
+    );
+
+    /**
+     * 顶部头像和搜索框
+     */
+    Container headerViewTopView = new Container(
+      child: Flex(
+        direction: Axis.horizontal,
+        children: <Widget>[
+          Container(
+            margin: EdgeInsets.only(top:30,left: 10),
+            child: CircleAvatar(
+              backgroundImage: NetworkImage(
+                "https://wx.qlogo.cn/mmopen/vi_32/LH99GfeT31hdYG8W8c6wRialyC4nicTfssDXeqtIs4f5XogNqHhTdmVIuQDeGcgE0KRlZyzAz7JO5Nc7yesHx9Lg/132",
+              ),
+            ),
+          ),
+          searchInput
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+
+    /**
+     * 分类
+     */
+    Container solrView = new Container(
+        height: 25,
+        margin: EdgeInsets.only(top: 7),
+        child: StreamBuilder(
+          stream: spanListStreamController.stream,
+          initialData: spanList,
+          builder: (BuildContext context, AsyncSnapshot<List<String>> snapshot){
+            return ChooseListViewComponent.create(snapshot.data);
+          },
+        )
+    );
+
+    /**
+     * 头部
+     */
+    Container headerView = Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: NetworkImage("https://image.weilanwl.com/color2.0/plugin/cjkz2329.jpg"),
+            fit: BoxFit.fitWidth,
+          ),
+        ),
+        width: StaticConfig.phoneWeight,
+        height: 110,
+        child: Flex(
+          direction: Axis.vertical,
+          children: <Widget>[
+            headerViewTopView,
+            solrView
+          ],
+        )
+    );
+
+    ///动态卡片
+    Container sectionView = Container(
+      color: Color(0x00ffffffff),
+      height: 510,
+      child: StreamBuilder(
+          stream: dynamicListStreamController.stream,
+          initialData: dynamicList,
+          builder: (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot){
+            return createDynamic(snapshot.data);
+          }
+      )
+    );
+
+    ///页面到底事件监听
+    dynamicScrollController.addListener((){
+      if (dynamicScrollController.position.pixels == dynamicScrollController.position.maxScrollExtent && isDynamicScrollBottom == false) {
+        isDynamicScrollBottom = true;
+        getDynameicList(0,dynamicList[dynamicList.length-1]["dynamic"]["dynamicId"]);
+        //防抖
+        new Timer(new Duration(milliseconds: 2), () {
+          isDynamicScrollBottom = true;
+        });
+      }
+    });
+
+    return new Scaffold(
+      body: Flex(
+        direction: Axis.vertical,
+        children: <Widget>[
+          headerView,
+          sectionView
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationImgBarItemComponent.create("assets/image/coin/coin.png", "投币", 0x00aaaaaaaa,20,11),
+          BottomNavigationImgBarItemComponent.create("assets/image/coin/dynamic.png", "动态", 0x00aaaaaaaa,20,11),
+          BottomNavigationImgBarItemComponent.create("assets/image/coin/me.png", "我的", 0x00aaaaaaaa,20,11)
+        ],
+      ),
     );
   }
 }
+
+
