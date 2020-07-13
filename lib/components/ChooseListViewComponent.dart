@@ -7,13 +7,13 @@ class ChooseListViewComponent{
 
     for(var span in spanList){
       wl.add(Container(
-        width: 80,
+        width: 60,
         child: Text(
           span,
           textAlign: TextAlign.center,
           style: TextStyle(
               color: Color(0x00cccccccc),
-              fontSize: 20
+              fontSize: 15
           ),
         ),
       ));

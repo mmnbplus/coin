@@ -1,12 +1,13 @@
 import 'package:coin/config/StaticConfig.dart';
 import 'package:coin/utils/ColorTextStyle.dart';
+import 'package:coin/utils/app_size.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class DynamicViewComponent{
   static Container create(String img,String title,String nickname,int good,int talk,int look,String provider){
     return Container(
-      margin: EdgeInsets.only(left: 2,right: 2),
+      margin: EdgeInsets.only(left: AppSize.width(5),right: AppSize.width(5),bottom: AppSize.width(10)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(5),
         child: Flex(
@@ -17,8 +18,8 @@ class DynamicViewComponent{
                   Container(
                     child: Image.network(
                       img,
-                      width: (StaticConfig.phoneWeight/2)-4,
-                      height: 100,
+                      width: AppSize.width(600),
+                      height: AppSize.width(300),
                       fit: BoxFit.fitWidth,
                     ),
                   ),
@@ -37,15 +38,18 @@ class DynamicViewComponent{
                 ],
               ),
               Container(
-                width: 200,
+                width: AppSize.width(600),
                 padding: EdgeInsets.only(left: 5),
-                child: Text(title,textAlign: TextAlign.left),
+                child: Text(title,textAlign: TextAlign.left,style: TextStyle(
+                    fontSize: AppSize.sp(30)
+                )),
               ),
               Container(
-                width: 200,
+                width: AppSize.width(600),
                 padding: EdgeInsets.only(left: 5),
                 child: Text(nickname,textAlign: TextAlign.left,style: TextStyle(
-                  color: Colors.grey
+                  color: Colors.grey,
+                  fontSize: AppSize.sp(25)
                 )),
               ),
             ],
